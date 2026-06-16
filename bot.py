@@ -15,7 +15,7 @@ if not BOT_TOKEN:
     raise ValueError("توکن ربات در فایل .env پیدا نشد!")
 
 # شناسه کانال (با @ یا بدون آن)
-CHANNEL_USERNAME = "hossein_codes"  # یا "hossein_codes"
+CHANNEL_USERNAME = "@hossein_codes"  # یا "hossein_codes"
 
 logging.basicConfig(level=logging.INFO)
 
