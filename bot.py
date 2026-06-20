@@ -49,36 +49,59 @@ async def is_user_subscribed(user_id: int) -> bool:
 
 # ---------- دریافت لینک مستقیم (پشتیبانی از یوتیوب، اینستا، تیک‌تاک و ...) ----------
 async def get_media_url(url: str):
+    # تنظیمات فوق‌سبک برای yt-dlp
     ydl_opts = {
         'quiet': True,
         'no_warnings': True,
-        'extract_flat': False,
-        'format': 'bestvideo[height<=480]+bestaudio/best[height<=480]',
-        'noplaylist': True,
+        'extract_flat': 'in_playlist',  # استخراج حداقل اطلاعات
+        'format': 'best[height<=720][ext=mp4]/best[height<=720]',  # اولویت با mp4 و کیفیت 720p
+        'noplaylist': True,  # فقط خود ویدیو، نه لیست پخش
+        'no_check_certificate': True,
+        'prefer_ffmpeg': False,
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        }
     }
     try:
         loop = asyncio.get_event_loop()
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            # استخراج اطلاعات بدون دانلود
             info = await loop.run_in_executor(None, lambda: ydl.extract_info(url, download=False))
             
-            if 'entries' in info:
+            # اگر لینک مستقیم وجود داشت
+            if info and info.get('url'):
+                return [info['url']]
+            
+            # اگر فرمت‌های مختلف وجود داشت، بهترین را انتخاب کن
+            if info and info.get('formats'):
+                # اولویت با کیفیت 720p و فرمت mp4
+                best = None
+                for f in info['formats']:
+                    height = f.get('height') or 0
+                    ext = f.get('ext')
+                    if height <= 720 and ext == 'mp4':
+                        if best is None or height > best.get('height', 0):
+                            best = f
+                # اگر mp4 با کیفیت پایین پیدا نشد، هر فرمت دیگری را بگیر
+                if not best:
+                    best = max(info['formats'], key=lambda f: (f.get('height') or 0, -f.get('filesize', 0) or 0))
+                if best and best.get('url'):
+                    return [best['url']]
+            
+            # اگر لیستی از ویدیوها بود (مثل پلی‌لیست)
+            if info and 'entries' in info:
                 urls = []
                 for entry in info['entries']:
-                    if entry.get('url'):
+                    if entry and entry.get('url'):
                         urls.append(entry['url'])
-                    elif entry.get('formats'):
-                        best = max(entry['formats'], key=lambda f: f.get('height', 0) or 0)
-                        urls.append(best['url'])
-                return urls
-            elif info.get('formats'):
-                best = max(info['formats'], key=lambda f: f.get('height', 0) or 0)
-                return [best['url']]
-            elif info.get('url'):
-                return [info['url']]
-            else:
-                return None
+                return urls if urls else None
+            
+            # هیچ لینکی پیدا نشد
+            return None
     except Exception as e:
         logging.error(f"خطا در دریافت لینک: {e}")
+        # لاگ کامل خطا برای دیباگ
+        logging.exception(e)
         return None
 
 # ---------- ارسال فایل ----------
