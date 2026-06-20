@@ -15,7 +15,7 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 if not BOT_TOKEN:
     raise ValueError("توکن ربات در فایل .env پیدا نشد!")
 
-CHANNEL_USERNAME = "-1001234567890"  # شناسه عددی کانال خود را اینجا بگذارید
+CHANNEL_USERNAME = "2998348881"  
 
 logging.basicConfig(level=logging.INFO)
 
