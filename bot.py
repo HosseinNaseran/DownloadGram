@@ -116,7 +116,7 @@ async def help_command(message: Message):
 
 # ---------- دریافت پیام‌های معمولی ----------
 @dp.message()
-async def handle_instagram_link(message: Message):
+async def handle_download_link(message: Message):
     user_id = message.from_user.id
     if not await is_user_subscribed(user_id):
         await message.answer(
@@ -127,26 +127,39 @@ async def handle_instagram_link(message: Message):
         )
         return
 
-    if "instagram.com" in message.text:
-        processing_msg = await message.answer("⏳ در حال دریافت اطلاعات از اینستاگرام...")
-        media_urls = await get_instagram_media_url(message.text)
+    # لیست سایت‌های پشتیبانی‌شده (اختیاری - فقط برای نمایش)
+    supported_sites = ["instagram.com", "youtube.com", "youtu.be", "tiktok.com", "twitter.com", "x.com"]
+    
+    # بررسی می‌کنیم که آیا لینک مربوط به یکی از سایت‌های پشتیبانی‌شده است
+    is_supported = any(site in message.text for site in supported_sites)
+    
+    if not is_supported:
+        await message.answer(
+            "❌ لطفاً یک لینک معتبر از سایت‌های زیر ارسال کنید:\n"
+            "• اینستاگرام (instagram.com)\n"
+            "• یوتیوب (youtube.com)\n"
+            "• تیک‌تاک (tiktok.com)\n"
+            "• توئیتر (twitter.com / x.com)"
+        )
+        return
 
-        if not media_urls:
-            await processing_msg.edit_text("❌ خطا: امکان دانلود این محتوا وجود ندارد. لطفاً از لینک معتبر استفاده کنید.")
-            return
+    # پردازش لینک (حالا برای هر سایتی کار می‌کند)
+    processing_msg = await message.answer("⏳ در حال دریافت اطلاعات از لینک...")
+    media_urls = await get_instagram_media_url(message.text)  # اسم تابع رو می‌تونید عوض کنید
 
-        if len(media_urls) > 1:
-            await processing_msg.edit_text(f"📸 تعداد {len(media_urls)} رسانه در این پست پیدا شد. در حال ارسال...")
-            for url in media_urls:
-                await send_media_to_user(message, url)
-            await message.answer("✅ تمام فایل‌ها ارسال شدند.")
-        else:
-            await processing_msg.edit_text("📥 در حال دانلود و ارسال...")
-            await send_media_to_user(message, media_urls[0])
-            await message.answer("✅ دانلود و ارسال با موفقیت انجام شد.")
+    if not media_urls:
+        await processing_msg.edit_text("❌ خطا: امکان دانلود این محتوا وجود ندارد. لطفاً از لینک معتبر استفاده کنید.")
+        return
+
+    if len(media_urls) > 1:
+        await processing_msg.edit_text(f"📸 تعداد {len(media_urls)} رسانه در این پست پیدا شد. در حال ارسال...")
+        for url in media_urls:
+            await send_media_to_user(message, url)
+        await message.answer("✅ تمام فایل‌ها ارسال شدند.")
     else:
-        await message.answer("لطفاً یک لینک معتبر از اینستاگرام ارسال کنید.")
-        
+        await processing_msg.edit_text("📥 در حال دانلود و ارسال...")
+        await send_media_to_user(message, media_urls[0])
+        await message.answer("✅ دانلود و ارسال با موفقیت انجام شد.")
 # ---------- راه‌اندازی وب‌سرور برای Render ----------
 from aiohttp import web
 
